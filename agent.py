@@ -4,6 +4,7 @@ import os, json, time, tempfile
 import sounddevice as sd
 import soundfile as sf
 import numpy as np
+from pynput import keyboard
 
 load_dotenv()
 
@@ -72,11 +73,26 @@ class Chat:
         self.extract_facts(user_input, reply)
         return reply
 
-    def listen(self, duration=5, samplerate=16000):
-        print(f"Listening for {duration} seconds...")
-        audio = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1, dtype=np.int16)
-        sd.wait()
+    def listen(self, samplerate=16000):
+        chunks = []
 
+        def on_audio(indata, frames, t, status):
+            chunks.append(indata.copy())
+
+        print("Hold SPACE to speak, release to send...")
+        with keyboard.Events() as events:
+            for event in events:
+                if isinstance(event, keyboard.Events.Press) and event.key == keyboard.Key.space:
+                    break
+
+        print("Recording...")
+        with sd.InputStream(samplerate=samplerate, channels=1, dtype=np.int16, callback=on_audio):
+            with keyboard.Events() as events:
+                for event in events:
+                    if isinstance(event, keyboard.Events.Release) and event.key == keyboard.Key.space:
+                        break
+
+        audio = np.concatenate(chunks)
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
             tmp_path = f.name
         try:

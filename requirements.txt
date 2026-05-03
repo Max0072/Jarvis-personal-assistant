@@ -3,6 +3,6 @@ python-dotenv
 sounddevice
 soundfile
 numpy
-
+pynput
 
 
